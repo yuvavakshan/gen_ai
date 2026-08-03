@@ -1,0 +1,36 @@
+/* style.css
+   Small set of custom tweaks layered on top of Bootstrap 5.
+   Keep this file minimal - Bootstrap utility classes handle most styling. */
+
+body {
+    background-color: #f4f6f9;
+}
+
+/* Subtle lift effect on dashboard stat cards */
+.stat-card {
+    transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Make table rows feel a little more spaced out and readable */
+.table td, .table th {
+    vertical-align: middle;
+}
+
+/* Navbar active link underline */
+.navbar-nav .nav-link.active {
+    border-bottom: 2px solid #ffffff;
+}
+
+/* Footer always sticks to the bottom thanks to layout.html's flex classes */
+footer a {
+    color: #f8f9fa;
+}
+
+/* Slightly rounder cards/modals for a softer, modern look */
+.card, .modal-content {
+    border-radius: 0.6rem;
+}

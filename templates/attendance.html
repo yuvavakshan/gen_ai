@@ -1,0 +1,220 @@
+{% extends "layout.html" %}
+{% block title %}Attendance - Attendance MS{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-calendar2-check-fill me-2"></i>Attendance Management</h2>
+
+<!-- ============ MARK TODAY'S ATTENDANCE ============ -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Mark Attendance</h5>
+    </div>
+    <div class="card-body">
+        {% if students %}
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Class</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Remarks</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in students %}
+                    <tr>
+                        <form method="POST" action="{{ url_for('mark_attendance') }}">
+                            <td>
+                                {{ s.student_id }}
+                                <input type="hidden" name="student_pk" value="{{ s.id }}">
+                            </td>
+                            <td>{{ s.name }}</td>
+                            <td><span class="badge bg-secondary">{{ s.class }}</span></td>
+                            <td>
+                                <input type="date" name="attendance_date" value="{{ today }}"
+                                       class="form-control form-control-sm" required>
+                            </td>
+                            <td>
+                                <select name="status" class="form-select form-select-sm">
+                                    <option value="Present" {% if todays_status.get(s.id) == 'Present' %}selected{% endif %}>Present</option>
+                                    <option value="Absent" {% if todays_status.get(s.id) == 'Absent' %}selected{% endif %}>Absent</option>
+                                </select>
+                            </td>
+                            <td>
+                                <input type="text" name="remarks" class="form-control form-control-sm" placeholder="optional">
+                            </td>
+                            <td class="text-end">
+                                <button type="submit" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-check-lg me-1"></i>Save
+                                </button>
+                            </td>
+                        </form>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No students yet. Add students first from the Students page.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ============ FILTER ATTENDANCE HISTORY ============ -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('attendance') }}" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small text-muted">Filter by Date</label>
+                <input type="date" name="date_filter" value="{{ date_filter }}" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted">Filter by Class</label>
+                <select name="class_filter" class="form-select">
+                    <option value="">All Classes</option>
+                    {% for c in classes %}
+                        <option value="{{ c }}" {% if c == class_filter %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted">Filter by Status</label>
+                <select name="status_filter" class="form-select">
+                    <option value="">All</option>
+                    <option value="Present" {% if status_filter == 'Present' %}selected{% endif %}>Present</option>
+                    <option value="Absent" {% if status_filter == 'Absent' %}selected{% endif %}>Absent</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-grid">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-funnel-fill me-1"></i>Apply Filters
+                </button>
+            </div>
+        </form>
+        {% if date_filter or class_filter or status_filter %}
+            <a href="{{ url_for('attendance') }}" class="d-inline-block mt-2 small">
+                <i class="bi bi-x-circle me-1"></i>Clear filters
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ============ ATTENDANCE HISTORY TABLE ============ -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Attendance History</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Class</th>
+                        <th>Status</th>
+                        <th>Remarks</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in records %}
+                    <tr>
+                        <td>{{ r.attendance_date }}</td>
+                        <td>{{ r.student_id }}</td>
+                        <td>{{ r.name }}</td>
+                        <td><span class="badge bg-secondary">{{ r.class }}</span></td>
+                        <td>
+                            {% if r.status == 'Present' %}
+                                <span class="badge bg-success">Present</span>
+                            {% else %}
+                                <span class="badge bg-danger">Absent</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ r.remarks or "-" }}</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-warning"
+                                    data-bs-toggle="modal" data-bs-target="#editAttendanceModal"
+                                    data-pk="{{ r.id }}" data-status="{{ r.status }}"
+                                    data-remarks="{{ r.remarks or '' }}" data-name="{{ r.name }}"
+                                    data-date="{{ r.attendance_date }}" title="Edit">
+                                <i class="bi bi-pencil-fill"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger"
+                                    data-bs-toggle="modal" data-bs-target="#deleteAttendanceModal"
+                                    data-pk="{{ r.id }}" data-name="{{ r.name }}" data-date="{{ r.attendance_date }}"
+                                    title="Delete">
+                                <i class="bi bi-trash-fill"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">No attendance records found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ============ EDIT ATTENDANCE MODAL ============ -->
+<div class="modal fade" id="editAttendanceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" id="editAttendanceForm" action="">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil-fill me-1"></i>Edit Attendance</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">Editing record for <strong id="edit_att_name"></strong> on <strong id="edit_att_date"></strong></p>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select name="status" id="edit_att_status" class="form-select">
+                            <option value="Present">Present</option>
+                            <option value="Absent">Absent</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Remarks</label>
+                        <input type="text" name="remarks" id="edit_att_remarks" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ============ DELETE ATTENDANCE CONFIRMATION MODAL ============ -->
+<div class="modal fade" id="deleteAttendanceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" id="deleteAttendanceForm" action="">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Confirm Deletion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Delete the attendance record for <strong id="delete_att_name"></strong>
+                        on <strong id="delete_att_date"></strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
